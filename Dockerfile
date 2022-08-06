@@ -78,7 +78,7 @@ RUN ZERO_UI_VERSION=`curl --silent "https://api.github.com/repos/dec0dOS/zero-ui
     yarn install && \
     yarn build
 
-FROM centos:8
+FROM ubuntu:jammy
 
 ENV NODE_VERSION=18.x
 
@@ -99,17 +99,27 @@ COPY --from=build-stage /src/ZeroTierOne/attic/world/mkworld /app/ZeroTierOne/mk
 COPY --from=build-stage /src/ZeroTierOne/attic/world/world.bin /app/config/world.bin
 COPY --from=build-stage /src/config/world.c /app/config/world.c
 
-# Envirment
-RUN sed -i 's/mirrorlist/#mirrorlist/g' /etc/yum.repos.d/CentOS-Linux-* && \
-    sed -i 's|#baseurl=http://mirror.centos.org|baseurl=http://linuxsoft.cern.ch/centos-vault|g' /etc/yum.repos.d/CentOS-Linux-* && \
-    echo -e 'deltarpm=0\ntimeout=300\nminrate=100' >> /etc/yum.conf
+RUN apt update && apt upgrade -y
+RUN apt -y install \
+    pkg-config \
+    bash \
+    clang \
+    libjemalloc2 \
+    libjemalloc-dev \
+    libpq5 \
+    libpq-dev \
+    openssl \
+    libssl-dev \
+    postgresql-client \
+    postgresql-client-common \
+    curl
 
-RUN curl --silent --location https://dl.yarnpkg.com/rpm/yarn.repo -o /etc/yum.repos.d/yarn.repo && \
-    rpm --import https://dl.yarnpkg.com/rpm/pubkey.gpg && \
-    curl -fsSL https://rpm.nodesource.com/setup_${NODE_VERSION} | bash - && \
-    dnf update -y && \
-    dnf module enable -y postgresql:10 && \
-    dnf install -y nodejs yarn postgresql-server libpq wget git bash jq postgresql-devel tar gcc-c++ make xz openssl && \
+RUN curl -fsSL https://deb.nodesource.com/setup_${NODE_VERSION} | bash - && \
+    curl -sL https://dl.yarnpkg.com/debian/pubkey.gpg | gpg --dearmor | tee /usr/share/keyrings/yarnkey.gpg >/dev/null && \
+    echo "deb [signed-by=/usr/share/keyrings/yarnkey.gpg] https://dl.yarnpkg.com/debian stable main" | tee /etc/apt/sources.list.d/yarn.list
+
+RUN apt update && apt upgrade -y
+RUN apt -y install nodejs jq tar yarn file && \
     mkdir -p /var/lib/zerotier-one/ && \
     ln -s /app/config/authtoken.secret /var/lib/zerotier-one/authtoken.secret
 
