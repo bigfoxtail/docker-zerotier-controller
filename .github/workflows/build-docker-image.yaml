@@ -1,5 +1,6 @@
 name: 'Build docker image'
-on: 
+on:
+  workflow_dispatch:
   # Auto build on push to main branch
   push:
     paths-ignore:
